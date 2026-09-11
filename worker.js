@@ -4,8 +4,8 @@ const EDGE_TUNNEL_SOURCE =
 const CLOUDFLARE_API =
   "https://api.cloudflare.com/client/v4";
 
-const COMPATIBILITY_DATE =
-  new Date().toISOString().slice(0, 10);
+const COMPATIBILITY_DATE = "2026-09-12";
+  
 
 function json(data, status = 200) {
   return new Response(
