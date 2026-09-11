@@ -1,92 +1,143 @@
 const EDGE_TUNNEL_SOURCE =
   "https://raw.githubusercontent.com/cmliu/edgetunnel/main/_worker.js";
 
-const CF_API =
+const CLOUDFLARE_API =
   "https://api.cloudflare.com/client/v4";
 
+const COMPATIBILITY_DATE =
+  new Date().toISOString().slice(0, 10);
 
-function corsHeaders(){
-
-  return {
-    "Access-Control-Allow-Origin":"*",
-    "Access-Control-Allow-Methods":"POST,OPTIONS",
-    "Access-Control-Allow-Headers":"Content-Type",
-    "Content-Type":"application/json; charset=utf-8"
-  };
-
-}
-
-
-function response(data,status=200){
-
+function json(data, status = 200) {
   return new Response(
     JSON.stringify(data),
     {
       status,
-      headers:corsHeaders()
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Pragma": "no-cache",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization",
+        "Access-Control-Allow-Methods":
+          "POST, OPTIONS"
+      }
     }
   );
-
 }
 
+function error(message, status = 400, extra = {}) {
+  return json(
+    {
+      success: false,
+      error: message,
+      ...extra
+    },
+    status
+  );
+}
 
-function randomString(length=16){
+function cors(response) {
+  const headers =
+    new Headers(response.headers);
 
+  headers.set(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+
+  headers.set(
+    "Access-Control-Allow-Methods",
+    "POST, OPTIONS"
+  );
+
+  headers.set(
+    "Cache-Control",
+    "no-store"
+  );
+
+  return new Response(
+    response.body,
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    }
+  );
+}
+
+function randomString(length = 12) {
   const chars =
     "abcdefghijklmnopqrstuvwxyz0123456789";
 
   const bytes =
-    new Uint8Array(length);
+    crypto.getRandomValues(
+      new Uint8Array(length)
+    );
 
-  crypto.getRandomValues(bytes);
+  let output = "";
 
-  let result = "";
-
-  for(const byte of bytes){
-
-    result +=
+  for (const byte of bytes) {
+    output +=
       chars[byte % chars.length];
-
   }
 
-  return result;
-
+  return output;
 }
 
+function randomPassword() {
+  const chars =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ" +
+    "abcdefghijkmnopqrstuvwxyz" +
+    "23456789" +
+    "!@#$%";
 
-function projectName(){
+  const bytes =
+    crypto.getRandomValues(
+      new Uint8Array(24)
+    );
 
+  let password = "";
+
+  for (const byte of bytes) {
+    password +=
+      chars[byte % chars.length];
+  }
+
+  return "ET-" + password;
+}
+
+function projectName() {
   return (
-    "et-" +
-    randomString(12)
+    "edgetunnel-" +
+    randomString(10)
   );
-
 }
 
-
-function adminPassword(){
-
+function kvName() {
   return (
-    "ET-" +
-    randomString(30)
+    "edgetunnel-kv-" +
+    randomString(8)
   );
-
 }
-
 
 async function cloudflare(
   token,
   path,
-  options={}
-){
-
+  options = {}
+) {
   const response =
     await fetch(
-      CF_API + path,
+      CLOUDFLARE_API + path,
       {
         ...options,
-        headers:{
-          "Authorization":
+        headers: {
+          Authorization:
             "Bearer " + token,
 
           ...(options.headers || {})
@@ -96,890 +147,1092 @@ async function cloudflare(
 
   let data;
 
-  try{
+  try {
     data =
       await response.json();
-  }
-  catch{
+  } catch {
     throw new Error(
-      "Cloudflare returned an invalid response."
+      `Cloudflare returned HTTP ${response.status}.`
     );
   }
 
-  if(
+  if (
     !response.ok ||
     data.success === false
-  ){
-
+  ) {
     const message =
-      Array.isArray(data.errors)
-        ? data.errors
-            .map(
-              error =>
-                error.message ||
-                JSON.stringify(error)
-            )
-            .join("; ")
-        : "";
+      data?.errors
+        ?.map(
+          item => item.message
+        )
+        ?.filter(Boolean)
+        ?.join("; ");
 
     throw new Error(
       message ||
-      `Cloudflare API error: ${response.status}`
+      `Cloudflare API error (${response.status}).`
     );
-
   }
 
   return data;
-
 }
 
-
-/*
-  Verify token and discover account.
-*/
-
-async function getAccount(token){
-
-  const verify =
+async function verifyToken(token) {
+  const result =
     await cloudflare(
       token,
       "/user/tokens/verify"
     );
 
-  if(
-    verify.result &&
-    verify.result.status &&
-    verify.result.status !== "active"
-  ){
-
+  if (!result.success) {
     throw new Error(
-      "The Cloudflare API Token is not active."
+      "Cloudflare API Token is not valid."
     );
-
   }
 
-
-  const accounts =
-    await cloudflare(
-      token,
-      "/accounts?per_page=50"
-    );
-
-
-  if(
-    !accounts.result ||
-    !accounts.result.length
-  ){
-
-    throw new Error(
-      "No Cloudflare account is available to this token."
-    );
-
-  }
-
-
-  /*
-    Same simple behavior intended by the wizard:
-    use the first account returned to the token.
-  */
-
-  const account =
-    accounts.result[0];
-
-
-  return {
-    id:account.id,
-    name:account.name || ""
-  };
-
+  return true;
 }
 
+async function getAccounts(token) {
+  const result =
+    await cloudflare(
+      token,
+      "/accounts?per_page=100"
+    );
 
-/*
-  Download the current EdgeTunnel main/_worker.js.
-*/
+  const accounts =
+    Array.isArray(result.result)
+      ? result.result
+      : [];
 
-async function getEdgeTunnel(){
+  if (!accounts.length) {
+    throw new Error(
+      "No Cloudflare account is available for this API Token."
+    );
+  }
+
+  return accounts;
+}
+
+async function getAccount(token) {
+  const accounts =
+    await getAccounts(token);
+
+  return accounts[0];
+}
+
+async function fetchEdgeTunnel(logs) {
+  logs.push(
+    "Downloading latest EdgeTunnel from official GitHub..."
+  );
 
   const response =
     await fetch(
       EDGE_TUNNEL_SOURCE,
       {
-        cache:"no-store"
+        headers: {
+          Accept:
+            "application/javascript,text/javascript,*/*"
+        },
+        cf: {
+          cacheTtl: 0,
+          cacheEverything: false
+        }
       }
     );
 
-  if(!response.ok){
-
+  if (!response.ok) {
     throw new Error(
-      "Unable to download the latest EdgeTunnel source."
+      "Could not download the latest EdgeTunnel source."
     );
-
   }
 
   const source =
     await response.text();
 
-  if(
-    !source.includes("export default")
-  ){
-
+  if (
+    source.length < 1000 ||
+    !source.includes("fetch")
+  ) {
     throw new Error(
-      "Downloaded EdgeTunnel source is invalid."
+      "The downloaded EdgeTunnel source looks invalid."
     );
-
   }
 
+  logs.push(
+    "Latest EdgeTunnel source downloaded."
+  );
+
   return source;
-
 }
-
-
-/*
-  Create KV namespace.
-*/
 
 async function createKV(
   token,
   accountId,
-  name
-){
+  logs
+) {
+  const name =
+    kvName();
+
+  logs.push(
+    "Creating a new KV namespace..."
+  );
 
   const result =
     await cloudflare(
       token,
       `/accounts/${accountId}/storage/kv/namespaces`,
       {
-        method:"POST",
+        method: "POST",
 
-        headers:{
+        headers: {
           "Content-Type":
             "application/json"
         },
 
-        body:
-          JSON.stringify({
-            title:
-              name + "-kv"
-          })
+        body: JSON.stringify({
+          title: name
+        })
       }
     );
 
-  if(
-    !result.result ||
-    !result.result.id
-  ){
+  const id =
+    result?.result?.id;
 
+  if (!id) {
     throw new Error(
-      "Cloudflare did not return a KV namespace ID."
+      "Cloudflare created the KV namespace but did not return its ID."
     );
-
   }
 
-  return result.result.id;
+  logs.push(
+    "KV namespace created."
+  );
 
+  return {
+    id,
+    name
+  };
 }
 
+async function deleteKV(
+  token,
+  accountId,
+  namespaceId
+) {
+  if (!namespaceId) return;
 
-/*
-  Get workers.dev subdomain.
-*/
+  try {
+    await cloudflare(
+      token,
+      `/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`,
+      {
+        method: "DELETE"
+      }
+    );
+  } catch {
+    // Ignore cleanup errors.
+  }
+}
+
+async function ensureWorkersSubdomain(
+  token,
+  accountId,
+  scriptName,
+  logs
+) {
+  logs.push(
+    "Checking workers.dev availability..."
+  );
+
+  try {
+    const current =
+      await cloudflare(
+        token,
+        `/accounts/${accountId}/workers/scripts/${encodeURIComponent(scriptName)}/subdomain`
+      );
+
+    if (
+      current?.result?.enabled
+    ) {
+      logs.push(
+        "workers.dev is already enabled."
+      );
+
+      return true;
+    }
+  } catch {
+    // Continue with enable attempt.
+  }
+
+  logs.push(
+    "Enabling workers.dev..."
+  );
+
+  try {
+    await cloudflare(
+      token,
+      `/accounts/${accountId}/workers/scripts/${encodeURIComponent(scriptName)}/subdomain`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          enabled: true,
+          previews_enabled: true
+        })
+      }
+    );
+
+    logs.push(
+      "workers.dev enabled."
+    );
+
+    return true;
+  } catch {
+    logs.push(
+      "workers.dev could not be enabled automatically."
+    );
+
+    return false;
+  }
+}
 
 async function getWorkersSubdomain(
   token,
   accountId
-){
+) {
+  const result =
+    await cloudflare(
+      token,
+      `/accounts/${accountId}/workers/subdomain`
+    );
 
-  try{
-
-    const result =
-      await cloudflare(
-        token,
-        `/accounts/${accountId}/workers/subdomain`
-      );
-
-    if(
-      result.result &&
-      result.result.subdomain
-    ){
-
-      return result.result.subdomain;
-
-    }
-
-  }
-  catch{
-    /*
-      Some accounts do not have the
-      subdomain API available.
-    */
-  }
-
-  return null;
-
+  return (
+    result?.result?.subdomain ||
+    null
+  );
 }
 
+async function ensureAccountWorkersSubdomain(
+  token,
+  accountId,
+  logs
+) {
+  try {
+    const current =
+      await getWorkersSubdomain(
+        token,
+        accountId
+      );
 
-/*
-  Deploy EdgeTunnel to Workers.
-*/
+    if (current) {
+      return current;
+    }
+  } catch {
+    // Try creation below.
+  }
 
-async function deployWorker(
+  logs.push(
+    "Creating the account workers.dev subdomain..."
+  );
+
+  try {
+    const created =
+      await cloudflare(
+        token,
+        `/accounts/${accountId}/workers/subdomain`,
+        {
+          method: "PUT",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({})
+        }
+      );
+
+    return (
+      created?.result?.subdomain ||
+      null
+    );
+  } catch {
+    logs.push(
+      "Account workers.dev subdomain could not be created automatically."
+    );
+
+    return null;
+  }
+}
+
+async function uploadWorker(
   token,
   accountId,
   scriptName,
   source,
   kvId,
-  password
-){
+  adminPassword,
+  logs
+) {
+  logs.push(
+    "Preparing Worker configuration..."
+  );
 
   const metadata = {
-
-    main_module:"worker.js",
+    main_module:
+      "worker.js",
 
     compatibility_date:
-      new Date()
-        .toISOString()
-        .slice(0,10),
+      COMPATIBILITY_DATE,
 
-    bindings:[
+    compatibility_flags: [
+      "nodejs_compat"
+    ],
+
+    bindings: [
       {
-        type:"kv_namespace",
-        name:"KV",
-        namespace_id:kvId
+        type:
+          "kv_namespace",
+
+        name:
+          "KV",
+
+        namespace_id:
+          kvId
       },
+
       {
-        type:"plain_text",
-        name:"ADMIN",
-        text:password
+        type:
+          "plain_text",
+
+        name:
+          "ADMIN",
+
+        text:
+          adminPassword
       }
     ]
-
   };
-
 
   const form =
     new FormData();
 
-
   form.append(
     "metadata",
-    new Blob(
-      [
-        JSON.stringify(metadata)
-      ],
+    JSON.stringify(metadata)
+  );
+
+  form.append(
+    "worker.js",
+    new File(
+      [source],
+      "worker.js",
       {
         type:
-          "application/json"
+          "application/javascript+module"
       }
     )
   );
 
-
-  form.append(
-    "worker.js",
-    new Blob(
-      [source],
-      {
-        type:
-          "application/javascript"
-      }
-    ),
-    "worker.js"
+  logs.push(
+    "Uploading EdgeTunnel Worker..."
   );
-
 
   await cloudflare(
     token,
-    `/accounts/${accountId}/workers/scripts/${scriptName}`,
+    `/accounts/${accountId}/workers/scripts/${encodeURIComponent(scriptName)}`,
     {
-      method:"PUT",
-      body:form
+      method: "PUT",
+      body: form
     }
   );
 
-
-  /*
-    Try to enable the workers.dev subdomain.
-  */
-
-  try{
-
-    await cloudflare(
-      token,
-      `/accounts/${accountId}/workers/scripts/${scriptName}/subdomain`,
-      {
-        method:"POST",
-
-        headers:{
-          "Content-Type":
-            "application/json"
-        },
-
-        body:
-          JSON.stringify({
-            enabled:true
-          })
-      }
-    );
-
-  }
-  catch{
-    /*
-      Deployment itself succeeded.
-      Subdomain may need to be enabled
-      in the Cloudflare dashboard.
-    */
-  }
-
-
-  const subdomain =
-    await getWorkersSubdomain(
-      token,
-      accountId
-    );
-
-
-  if(subdomain){
-
-    return (
-      "https://" +
-      scriptName +
-      "." +
-      subdomain
-    );
-
-  }
-
-
-  return (
-    "https://" +
-    scriptName +
-    ".workers.dev"
+  logs.push(
+    "Worker uploaded successfully."
   );
-
 }
 
+async function deployWorker(
+  token,
+  account,
+  source,
+  logs
+) {
+  const accountId =
+    account.id;
 
-/*
-  Create Pages project.
-*/
+  const scriptName =
+    projectName();
+
+  const adminPassword =
+    randomPassword();
+
+  let kv = null;
+
+  try {
+    kv =
+      await createKV(
+        token,
+        accountId,
+        logs
+      );
+
+    await uploadWorker(
+      token,
+      accountId,
+      scriptName,
+      source,
+      kv.id,
+      adminPassword,
+      logs
+    );
+
+    await ensureWorkersSubdomain(
+      token,
+      accountId,
+      scriptName,
+      logs
+    );
+
+    const subdomain =
+      await ensureAccountWorkersSubdomain(
+        token,
+        accountId,
+        logs
+      );
+
+    if (!subdomain) {
+      throw new Error(
+        "Worker deployed, but Cloudflare did not provide a workers.dev subdomain."
+      );
+    }
+
+    const url =
+      `https://${scriptName}.${subdomain}`;
+
+    logs.push(
+      "Verifying deployed Worker..."
+    );
+
+    const verification =
+      await fetch(
+        url,
+        {
+          method:
+            "GET",
+
+          redirect:
+            "manual"
+        }
+      );
+
+    if (
+      verification.status >= 500
+    ) {
+      throw new Error(
+        `Worker verification returned HTTP ${verification.status}.`
+      );
+    }
+
+    logs.push(
+      "Worker verification completed."
+    );
+
+    return {
+      success:
+        true,
+
+      platform:
+        "workers",
+
+      projectName:
+        scriptName,
+
+      url,
+
+      adminUrl:
+        url.replace(/\/+$/, "") +
+        "/admin",
+
+      adminPassword
+    };
+
+  } catch (e) {
+
+    if (kv?.id) {
+      logs.push(
+        "Deployment failed. Cleaning up the newly created KV namespace..."
+      );
+
+      await deleteKV(
+        token,
+        accountId,
+        kv.id
+      );
+    }
+
+    throw e;
+  }
+}
 
 async function createPagesProject(
   token,
   accountId,
-  name,
+  projectNameValue,
   kvId,
-  password
-){
+  adminPassword,
+  logs
+) {
+  logs.push(
+    "Creating Cloudflare Pages project..."
+  );
 
-  const result =
-    await cloudflare(
-      token,
-      `/accounts/${accountId}/pages/projects`,
-      {
-        method:"POST",
+  const body = {
+    name:
+      projectNameValue,
 
-        headers:{
-          "Content-Type":
-            "application/json"
+    production_branch:
+      "main",
+
+    deployment_configs: {
+      production: {
+        compatibility_date:
+          COMPATIBILITY_DATE,
+
+        compatibility_flags: [
+          "nodejs_compat"
+        ],
+
+        kv_namespaces: {
+          KV: {
+            namespace_id:
+              kvId
+          }
         },
 
-        body:
-          JSON.stringify({
+        env_vars: {
+          ADMIN: {
+            type:
+              "secret_text",
 
-            name,
-
-            production_branch:
-              "main",
-
-            deployment_configs:{
-              production:{
-
-                compatibility_date:
-                  new Date()
-                    .toISOString()
-                    .slice(0,10),
-
-                compatibility_flags:[
-                  "nodejs_compat"
-                ],
-
-                kv_namespaces:{
-                  KV:{
-                    namespace_id:
-                      kvId
-                  }
-                },
-
-                env_vars:{
-                  ADMIN:{
-                    type:
-                      "plain_text",
-                    value:
-                      password
-                  }
-                }
-
-              }
-
-            }
-
-          })
+            value:
+              adminPassword
+          }
+        }
       }
-    );
+    }
+  };
 
+  return await cloudflare(
+    token,
+    `/accounts/${accountId}/pages/projects`,
+    {
+      method:
+        "POST",
 
-  return result;
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
 
+      body:
+        JSON.stringify(body)
+    }
+  );
 }
-
-
-/*
-  Deploy _worker.js to Pages.
-*/
 
 async function deployPages(
   token,
-  accountId,
-  name,
-  source
-){
+  account,
+  source,
+  logs
+) {
+  const accountId =
+    account.id;
 
-  const form =
-    new FormData();
+  const name =
+    projectName();
 
+  const adminPassword =
+    randomPassword();
 
-  /*
-    Pages Direct Upload accepts _worker.js
-    directly.
-  */
+  let kv = null;
 
-  form.append(
-    "_worker.js",
-    new Blob(
-      [source],
-      {
-        type:
-          "application/javascript"
-      }
-    ),
-    "_worker.js"
-  );
+  let projectCreated =
+    false;
 
-
-  /*
-    Direct uploads require a manifest.
-    EdgeTunnel only has one uploaded file.
-  */
-
-  const hashBuffer =
-    await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(source)
-    );
-
-
-  const hashBytes =
-    new Uint8Array(
-      hashBuffer
-    );
-
-
-  /*
-    Pages manifest uses a content hash.
-  */
-
-  let hash = "";
-
-  for(
-    const byte of
-    hashBytes.slice(0,16)
-  ){
-
-    hash +=
-      byte
-        .toString(16)
-        .padStart(2,"0");
-
-  }
-
-
-  form.append(
-    "manifest",
-    JSON.stringify({
-      "/_worker.js":{
-        hash,
-        size:
-          new TextEncoder()
-            .encode(source)
-            .byteLength
-      }
-    })
-  );
-
-
-  form.append(
-    "branch",
-    "main"
-  );
-
-
-  form.append(
-    "commit_dirty",
-    "false"
-  );
-
-
-  form.append(
-    "commit_message",
-    "EdgeTunnel Wizard deployment"
-  );
-
-
-  const result =
-    await cloudflare(
-      token,
-      `/accounts/${accountId}/pages/projects/${name}/deployments`,
-      {
-        method:"POST",
-        body:form
-      }
-    );
-
-
-  if(
-    result.result &&
-    result.result.aliases &&
-    result.result.aliases.length
-  ){
-
-    return result.result.aliases[0];
-
-  }
-
-
-  return (
-    "https://" +
-    name +
-    ".pages.dev"
-  );
-
-}
-
-
-/*
-  Verify endpoint.
-*/
-
-async function verify(request){
-
-  try{
-
-    const body =
-      await request.json();
-
-    const token =
-      String(body.token || "")
-        .trim();
-
-    if(!token){
-
-      return response(
-        {
-          success:false,
-          error:
-            "Cloudflare API Token is required."
-        },
-        400
-      );
-
-    }
-
-
-    const account =
-      await getAccount(token);
-
-
-    return response({
-      success:true,
-      account:{
-        name:
-          account.name
-      }
-    });
-
-  }
-  catch(error){
-
-    return response(
-      {
-        success:false,
-        error:
-          error.message
-      },
-      400
-    );
-
-  }
-
-}
-
-
-/*
-  Main deployment endpoint.
-*/
-
-async function deploy(request){
-
-  const logs = [];
-
-
-  try{
-
-    const body =
-      await request.json();
-
-
-    const token =
-      String(body.token || "")
-        .trim();
-
-
-    const method =
-      String(body.method || "")
-        .toLowerCase();
-
-
-    if(!token){
-
-      throw new Error(
-        "Cloudflare API Token is required."
-      );
-
-    }
-
-
-    if(
-      method !== "workers" &&
-      method !== "pages"
-    ){
-
-      throw new Error(
-        "Invalid deployment method."
-      );
-
-    }
-
-
-    logs.push(
-      "Verifying Cloudflare token..."
-    );
-
-
-    const account =
-      await getAccount(token);
-
-
-    logs.push(
-      "Cloudflare account detected."
-    );
-
-
-    logs.push(
-      "Downloading latest EdgeTunnel source..."
-    );
-
-
-    const source =
-      await getEdgeTunnel();
-
-
-    logs.push(
-      "Latest EdgeTunnel source downloaded."
-    );
-
-
-    const name =
-      projectName();
-
-
-    logs.push(
-      "Generated project name: " +
-      name
-    );
-
-
-    logs.push(
-      "Creating KV namespace..."
-    );
-
-
-    const kvId =
+  try {
+    kv =
       await createKV(
         token,
-        account.id,
-        name
-      );
-
-
-    logs.push(
-      "KV namespace created."
-    );
-
-
-    /*
-      EdgeTunnel uses ADMIN.
-      We generate it automatically so
-      the user never has to enter another field.
-    */
-
-    const password =
-      adminPassword();
-
-
-    let url;
-
-
-    if(method === "workers"){
-
-      logs.push(
-        "Deploying EdgeTunnel Worker..."
-      );
-
-
-      url =
-        await deployWorker(
-          token,
-          account.id,
-          name,
-          source,
-          kvId,
-          password
-        );
-
-    }
-    else{
-
-      logs.push(
-        "Creating Cloudflare Pages project..."
-      );
-
-
-      await createPagesProject(
-        token,
-        account.id,
-        name,
-        kvId,
-        password
-      );
-
-
-      logs.push(
-        "Pages project created."
-      );
-
-
-      logs.push(
-        "Uploading latest EdgeTunnel _worker.js..."
-      );
-
-
-      url =
-        await deployPages(
-          token,
-          account.id,
-          name,
-          source
-        );
-
-    }
-
-
-    logs.push(
-      "Deployment completed successfully."
-    );
-
-
-    /*
-      Do NOT return the ADMIN password to
-      the frontend.
-    */
-
-    return response({
-      success:true,
-      url,
-      logs
-    });
-
-  }
-  catch(error){
-
-    return response(
-      {
-        success:false,
-        error:
-          error.message,
+        accountId,
         logs
-      },
-      400
+      );
+
+    await createPagesProject(
+      token,
+      accountId,
+      name,
+      kv.id,
+      adminPassword,
+      logs
     );
 
-  }
+    projectCreated =
+      true;
 
-}
+    logs.push(
+      "Pages project created."
+    );
 
+    logs.push(
+      "Uploading EdgeTunnel in Advanced Mode..."
+    );
 
-export default {
+    const form =
+      new FormData();
 
-  async fetch(request){
+    form.append(
+      "branch",
+      "main"
+    );
 
-    if(
-      request.method === "OPTIONS"
-    ){
+    form.append(
+      "commit_dirty",
+      "false"
+    );
 
-      return new Response(
-        null,
+    form.append(
+      "manifest",
+      JSON.stringify({
+        "_worker.js":
+          await sha256Hex(source)
+      })
+    );
+
+    form.append(
+      "_worker.js",
+      new File(
+        [source],
+        "_worker.js",
         {
-          status:204,
-          headers:corsHeaders()
+          type:
+            "application/javascript+module"
+        }
+      )
+    );
+
+    const deployment =
+      await cloudflare(
+        token,
+        `/accounts/${accountId}/pages/projects/${encodeURIComponent(name)}/deployments`,
+        {
+          method:
+            "POST",
+
+          body:
+            form
         }
       );
 
+    logs.push(
+      "Pages deployment uploaded."
+    );
+
+    const aliases =
+      deployment?.result?.aliases;
+
+    let url =
+      Array.isArray(aliases) &&
+      aliases.length
+        ? aliases[0]
+        : null;
+
+    if (!url) {
+      url =
+        `https://${name}.pages.dev`;
     }
 
+    logs.push(
+      "Verifying Pages deployment..."
+    );
+
+    const check =
+      await fetch(
+        url,
+        {
+          method:
+            "GET",
+
+          redirect:
+            "manual"
+        }
+      );
+
+    if (
+      check.status >= 500
+    ) {
+      throw new Error(
+        `Pages verification returned HTTP ${check.status}.`
+      );
+    }
+
+    logs.push(
+      "Pages verification completed."
+    );
+
+    return {
+      success:
+        true,
+
+      platform:
+        "pages",
+
+      projectName:
+        name,
+
+      url,
+
+      adminUrl:
+        url.replace(/\/+$/, "") +
+        "/admin",
+
+      adminPassword
+    };
+
+  } catch (e) {
+
+    if (
+      kv?.id &&
+      !projectCreated
+    ) {
+      await deleteKV(
+        token,
+        accountId,
+        kv.id
+      );
+    }
+
+    throw e;
+  }
+}
+
+async function sha256Hex(text) {
+  const bytes =
+    new TextEncoder().encode(text);
+
+  const hash =
+    await crypto.subtle.digest(
+      "SHA-256",
+      bytes
+    );
+
+  return [...new Uint8Array(hash)]
+    .map(
+      byte =>
+        byte
+          .toString(16)
+          .padStart(2, "0")
+    )
+    .join("");
+}
+
+async function handleVerify(request) {
+  let body;
+
+  try {
+    body =
+      await request.json();
+  } catch {
+    return error(
+      "Invalid JSON request."
+    );
+  }
+
+  const token =
+    String(body?.token || "")
+      .trim();
+
+  if (!token) {
+    return error(
+      "Cloudflare API Token is required."
+    );
+  }
+
+  try {
+    await verifyToken(
+      token
+    );
+
+    const account =
+      await getAccount(
+        token
+      );
+
+    return json({
+      success:
+        true,
+
+      accountName:
+        account.name ||
+        null
+    });
+
+  } catch (e) {
+    return error(
+      friendlyCloudflareError(
+        e.message
+      ),
+      401
+    );
+  }
+}
+
+async function handleDeploy(request) {
+  let body;
+
+  try {
+    body =
+      await request.json();
+  } catch {
+    return error(
+      "Invalid JSON request."
+    );
+  }
+
+  const token =
+    String(body?.token || "")
+      .trim();
+
+  const method =
+    String(
+      body?.method ||
+      body?.platform ||
+      ""
+    )
+      .toLowerCase();
+
+  if (!token) {
+    return error(
+      "Cloudflare API Token is required."
+    );
+  }
+
+  if (
+    method !== "workers" &&
+    method !== "pages"
+  ) {
+    return error(
+      "Invalid deployment platform."
+    );
+  }
+
+  const logs = [];
+
+  try {
+    logs.push(
+      "Verifying Cloudflare API Token..."
+    );
+
+    await verifyToken(
+      token
+    );
+
+    logs.push(
+      "Cloudflare token verified."
+    );
+
+    logs.push(
+      "Detecting Cloudflare account..."
+    );
+
+    const account =
+      await getAccount(
+        token
+      );
+
+    logs.push(
+      `Account detected: ${account.name || account.id}`
+    );
+
+    const source =
+      await fetchEdgeTunnel(
+        logs
+      );
+
+    let result;
+
+    if (
+      method === "workers"
+    ) {
+      result =
+        await deployWorker(
+          token,
+          account,
+          source,
+          logs
+        );
+    } else {
+      result =
+        await deployPages(
+          token,
+          account,
+          source,
+          logs
+        );
+    }
+
+    logs.push(
+      "EdgeTunnel installation finished successfully."
+    );
+
+    return json({
+      ...result,
+      logs
+    });
+
+  } catch (e) {
+
+    logs.push(
+      "ERROR: " +
+      friendlyCloudflareError(
+        e.message
+      )
+    );
+
+    return error(
+      friendlyCloudflareError(
+        e.message
+      ),
+      500,
+      {
+        logs
+      }
+    );
+  }
+}
+
+function friendlyCloudflareError(
+  message
+) {
+  const text =
+    String(message || "")
+      .trim();
+
+  if (!text) {
+    return "Unknown Cloudflare API error.";
+  }
+
+  const lower =
+    text.toLowerCase();
+
+  if (
+    lower.includes("authentication") ||
+    lower.includes("invalid api token") ||
+    lower.includes("invalid token") ||
+    lower.includes("unauthorized")
+  ) {
+    return (
+      "Cloudflare rejected the API Token. " +
+      "Create a new token and make sure it has access to the selected account."
+    );
+  }
+
+  if (
+    lower.includes("permission") ||
+    lower.includes("not authorized") ||
+    lower.includes("forbidden")
+  ) {
+    return (
+      "The API Token does not have enough permissions. " +
+      "Make sure the token has Workers, Workers KV and Pages permissions."
+    );
+  }
+
+  if (
+    lower.includes("workers.dev") &&
+    lower.includes("subdomain")
+  ) {
+    return (
+      "Cloudflare could not enable workers.dev automatically. " +
+      "Enable the workers.dev subdomain for this account and try again."
+    );
+  }
+
+  return text;
+}
+
+export default {
+
+  async fetch(request) {
+
+    if (
+      request.method === "OPTIONS"
+    ) {
+      return cors(
+        new Response(
+          null,
+          {
+            status:
+              204,
+
+            headers: {
+              "Access-Control-Allow-Origin":
+                "*",
+
+              "Access-Control-Allow-Headers":
+                "Content-Type, Authorization",
+
+              "Access-Control-Allow-Methods":
+                "POST, OPTIONS"
+            }
+          }
+        )
+      );
+    }
 
     const url =
       new URL(request.url);
 
-
-    if(
+    if (
       request.method === "POST" &&
       url.pathname === "/api/verify"
-    ){
-
-      return verify(request);
-
+    ) {
+      return cors(
+        await handleVerify(
+          request
+        )
+      );
     }
 
-
-    if(
+    if (
       request.method === "POST" &&
       url.pathname === "/api/deploy"
-    ){
-
-      return deploy(request);
-
+    ) {
+      return cors(
+        await handleDeploy(
+          request
+        )
+      );
     }
 
+    return cors(
+      json({
+        success:
+          true,
 
-    return new Response(
-      "EdgeTunnel Wizard API",
-      {
-        status:200
-      }
+        name:
+          "EdgeTunnel Wizard API",
+
+        status:
+          "online"
+      })
     );
-
   }
-
 };
