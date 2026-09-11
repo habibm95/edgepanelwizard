@@ -181,6 +181,30 @@
       color:#e8ecf1;
     }
 
+    .token-create{
+      background:#202630;
+      color:#f4f6f8;
+      border:1px solid #343d4a;
+      margin-top:11px;
+    }
+
+    .token-create:hover{
+      background:#282f3a;
+      border-color:var(--orange);
+    }
+
+    .token-icon{
+      margin-right:6px;
+    }
+
+    .token-note{
+      color:#737d8b;
+      font-size:11px;
+      line-height:1.5;
+      text-align:center;
+      margin-top:8px;
+    }
+
     .methods{
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -302,7 +326,9 @@
 
   <div class="header">
     <div class="logo">ET</div>
+
     <h1>EdgeTunnel Wizard</h1>
+
     <div class="subtitle">
       Deploy EdgeTunnel to Cloudflare
     </div>
@@ -316,10 +342,14 @@
       <span id="p3"></span>
     </div>
 
+
     <!-- STEP 1 -->
+
     <section id="step1" class="step active">
 
-      <div class="step-number">STEP 1</div>
+      <div class="step-number">
+        STEP 1
+      </div>
 
       <div class="title">
         Cloudflare API Token
@@ -345,6 +375,23 @@
         Continue
       </button>
 
+
+      <!-- CREATE TOKEN -->
+
+      <button
+        id="createTokenButton"
+        class="token-create"
+        type="button"
+      >
+        <span class="token-icon">🔑</span>
+        Create Cloudflare API Token
+      </button>
+
+      <div class="token-note">
+        Opens Cloudflare with the required EdgeTunnel permissions pre-selected.
+      </div>
+
+
       <div id="tokenError" class="error"></div>
 
       <div class="security">
@@ -356,9 +403,12 @@
 
 
     <!-- STEP 2 -->
+
     <section id="step2" class="step">
 
-      <div class="step-number">STEP 2</div>
+      <div class="step-number">
+        STEP 2
+      </div>
 
       <div class="title">
         Choose deployment
@@ -375,18 +425,27 @@
           data-method="workers"
         >
           <span class="method-icon">⚡</span>
-          <span class="method-name">Workers</span>
+
+          <span class="method-name">
+            Workers
+          </span>
+
           <span class="method-desc">
             Deploy directly to Cloudflare Workers
           </span>
         </button>
+
 
         <button
           class="method"
           data-method="pages"
         >
           <span class="method-icon">◈</span>
-          <span class="method-name">Pages</span>
+
+          <span class="method-name">
+            Pages
+          </span>
+
           <span class="method-desc">
             Deploy using Cloudflare Pages
           </span>
@@ -405,6 +464,7 @@
 
 
     <!-- STEP 3 -->
+
     <section id="step3" class="step">
 
       <div class="step-number">
@@ -420,14 +480,21 @@
         and deploying it to Cloudflare.
       </div>
 
-      <div id="terminal" class="terminal"></div>
+      <div
+        id="terminal"
+        class="terminal"
+      ></div>
 
-      <div id="deployError" class="error"></div>
+      <div
+        id="deployError"
+        class="error"
+      ></div>
 
     </section>
 
 
     <!-- STEP 4 -->
+
     <section id="step4" class="step">
 
       <div class="step-number">
@@ -442,7 +509,10 @@
         EdgeTunnel has been deployed successfully.
       </div>
 
-      <div id="result" class="success"></div>
+      <div
+        id="result"
+        class="success"
+      ></div>
 
       <button
         id="againButton"
@@ -469,6 +539,44 @@ const API_BASE =
 
 let token = "";
 let deploymentMethod = "";
+
+
+/*
+  Cloudflare API Token Template
+
+  Permissions:
+  - Workers Scripts: Edit
+  - Workers KV Storage: Edit
+  - Cloudflare Pages: Edit
+
+  The user still confirms the token creation inside Cloudflare.
+*/
+
+const CLOUDFLARE_TOKEN_URL =
+  "https://dash.cloudflare.com/profile/api-tokens" +
+  "?permissionGroupKeys=" +
+  encodeURIComponent(
+    JSON.stringify([
+      {
+        key:"workers_scripts",
+        type:"edit"
+      },
+      {
+        key:"workers_kv_storage",
+        type:"edit"
+      },
+      {
+        key:"page",
+        type:"edit"
+      }
+    ])
+  ) +
+  "&accountId=*" +
+  "&zoneId=all" +
+  "&name=" +
+  encodeURIComponent(
+    "EdgeTunnel Wizard"
+  );
 
 
 function showStep(number){
@@ -518,9 +626,11 @@ async function post(path, body){
       API_BASE + path,
       {
         method:"POST",
+
         headers:{
           "Content-Type":"application/json"
         },
+
         body:JSON.stringify(body)
       }
     );
@@ -528,15 +638,23 @@ async function post(path, body){
   let data;
 
   try{
-    data = await response.json();
+
+    data =
+      await response.json();
+
   }
   catch{
+
     throw new Error(
       "Invalid response from wizard server."
     );
+
   }
 
-  if(!response.ok || !data.success){
+  if(
+    !response.ok ||
+    !data.success
+  ){
 
     throw new Error(
       data.error ||
@@ -550,64 +668,91 @@ async function post(path, body){
 }
 
 
+/* CREATE API TOKEN */
+
+document
+  .getElementById("createTokenButton")
+  .addEventListener(
+    "click",
+    ()=>{
+
+      window.open(
+        CLOUDFLARE_TOKEN_URL,
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+    }
+  );
+
+
 /* TOKEN */
 
 document
   .getElementById("continueButton")
-  .addEventListener("click", async ()=>{
+  .addEventListener(
+    "click",
+    async ()=>{
 
-    const error =
-      document.getElementById("tokenError");
+      const error =
+        document.getElementById(
+          "tokenError"
+        );
 
-    error.textContent = "";
+      error.textContent = "";
 
-    token =
-      document
-        .getElementById("token")
-        .value
-        .trim();
+      token =
+        document
+          .getElementById("token")
+          .value
+          .trim();
 
-    if(!token){
+      if(!token){
 
-      error.textContent =
-        "Please enter your Cloudflare API Token.";
+        error.textContent =
+          "Please enter your Cloudflare API Token.";
 
-      return;
+        return;
+
+      }
+
+      const button =
+        document.getElementById(
+          "continueButton"
+        );
+
+      button.disabled = true;
+
+      button.textContent =
+        "Checking...";
+
+      try{
+
+        await post(
+          "/api/verify",
+          { token }
+        );
+
+        showStep(2);
+
+      }
+      catch(errorObject){
+
+        error.textContent =
+          errorObject.message;
+
+      }
+      finally{
+
+        button.disabled = false;
+
+        button.textContent =
+          "Continue";
+
+      }
 
     }
-
-    const button =
-      document.getElementById(
-        "continueButton"
-      );
-
-    button.disabled = true;
-    button.textContent = "Checking...";
-
-    try{
-
-      await post(
-        "/api/verify",
-        { token }
-      );
-
-      showStep(2);
-
-    }
-    catch(errorObject){
-
-      error.textContent =
-        errorObject.message;
-
-    }
-    finally{
-
-      button.disabled = false;
-      button.textContent = "Continue";
-
-    }
-
-});
+  );
 
 
 /* BACK */
@@ -646,7 +791,7 @@ document
       }
     );
 
-});
+  });
 
 
 /* DEPLOY */
@@ -680,9 +825,15 @@ async function deploy(){
         }
       );
 
-    if(Array.isArray(result.logs)){
+    if(
+      Array.isArray(
+        result.logs
+      )
+    ){
 
-      result.logs.forEach(writeLog);
+      result.logs.forEach(
+        writeLog
+      );
 
     }
 
@@ -692,6 +843,7 @@ async function deploy(){
     document
       .getElementById("result")
       .innerHTML = `
+
         <div class="success-title">
           ✓ EdgeTunnel deployed successfully
         </div>
@@ -716,6 +868,7 @@ async function deploy(){
           Your EdgeTunnel source was downloaded
           from the current main branch.
         </small>
+
       `;
 
     showStep(4);
@@ -740,6 +893,7 @@ document
     ()=>{
 
       token = "";
+
       deploymentMethod = "";
 
       document
