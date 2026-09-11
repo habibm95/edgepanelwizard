@@ -1,309 +1,239 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EdgeTunnel Wizard</title>
 
   <style>
-    *{box-sizing:border-box}
-
-    :root{
-      --bg:#080a0f;
-      --card:#11151c;
-      --card2:#171c24;
-      --border:#29313d;
-      --text:#f4f6f8;
-      --muted:#929ba9;
-      --orange:#f48120;
-      --orange2:#ff9a45;
-      --danger:#ff7777;
-      --success:#69d18a;
+    * {
+      box-sizing: border-box;
     }
 
-    html,body{
-      margin:0;
-      min-height:100%;
-      background:var(--bg);
-      color:var(--text);
-      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,
-      "Segoe UI",Roboto,Arial,sans-serif;
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0f14;
+      color: #f5f7fa;
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
     }
 
-    body{
-      min-height:100vh;
-      display:flex;
-      justify-content:center;
+    .container {
+      width: 100%;
+      max-width: 520px;
     }
 
-    .container{
-      width:min(560px,calc(100% - 28px));
-      padding:35px 0 50px;
+    .card {
+      background: #111820;
+      border: 1px solid #26313d;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
     }
 
-    .header{
-      text-align:center;
-      margin-bottom:25px;
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      text-align: center;
     }
 
-    .logo{
-      width:58px;
-      height:58px;
-      margin:auto;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:17px;
-      background:var(--orange);
-      color:#111;
-      font-size:23px;
-      font-weight:900;
-      box-shadow:0 12px 35px rgba(244,129,32,.18);
+    .subtitle {
+      text-align: center;
+      color: #8f9baa;
+      margin-bottom: 28px;
     }
 
-    h1{
-      margin:14px 0 6px;
-      font-size:26px;
+    .steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      gap: 8px;
     }
 
-    .subtitle{
-      color:var(--muted);
-      font-size:14px;
+    .step {
+      flex: 1;
+      text-align: center;
+      padding: 9px 5px;
+      border-radius: 8px;
+      background: #19222c;
+      color: #7e8a97;
+      font-size: 12px;
     }
 
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:19px;
-      padding:23px;
-      box-shadow:0 20px 55px rgba(0,0,0,.35);
+    .step.active {
+      background: #2563eb;
+      color: white;
     }
 
-    .progress{
-      display:flex;
-      gap:6px;
-      margin-bottom:23px;
+    .step.done {
+      background: #166534;
+      color: white;
     }
 
-    .progress span{
-      flex:1;
-      height:4px;
-      border-radius:10px;
-      background:#252c36;
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #c8d0d9;
     }
 
-    .progress span.active{
-      background:var(--orange);
+    .token-wrapper {
+      position: relative;
+      width: 100%;
     }
 
-    .step{
-      display:none;
+    .token-wrapper input {
+      width: 100%;
+      padding: 14px 52px 14px 14px;
+      border-radius: 10px;
+      border: 1px solid #303b47;
+      background: #0b1117;
+      color: white;
+      outline: none;
+      font-size: 14px;
     }
 
-    .step.active{
-      display:block;
+    .token-wrapper input:focus {
+      border-color: #2563eb;
     }
 
-    .step-number{
-      color:var(--orange2);
-      font-size:11px;
-      font-weight:800;
-      letter-spacing:.8px;
-      margin-bottom:8px;
+    .token-eye {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      border: 0;
+      color: #8f9baa;
+      font-size: 19px;
+      cursor: pointer;
+      border-radius: 8px;
     }
 
-    .title{
-      font-size:20px;
-      font-weight:800;
-      margin-bottom:7px;
+    .token-eye:hover {
+      background: #19222c;
+      color: white;
     }
 
-    .description{
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.65;
-      margin-bottom:21px;
+    button {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 10px;
+      margin-top: 12px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
     }
 
-    label{
-      display:block;
-      color:#bbc3ce;
-      font-size:13px;
-      margin-bottom:8px;
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
     }
 
-    input{
-      width:100%;
-      border:1px solid #303947;
-      background:#0b0f15;
-      color:#fff;
-      border-radius:11px;
-      padding:14px;
-      font-size:14px;
-      outline:none;
+    .primary {
+      background: #2563eb;
+      color: white;
     }
 
-    input:focus{
-      border-color:var(--orange);
+    .primary:hover {
+      background: #1d4ed8;
     }
 
-    button{
-      width:100%;
-      border:0;
-      border-radius:11px;
-      padding:14px;
-      margin-top:14px;
-      background:var(--orange);
-      color:#111;
-      font-weight:850;
-      cursor:pointer;
-      font-size:14px;
+    .cloudflare {
+      background: #f59e0b;
+      color: #111;
     }
 
-    button:hover{
-      background:var(--orange2);
+    .cloudflare:hover {
+      background: #fbbf24;
     }
 
-    button:disabled{
-      opacity:.5;
-      cursor:not-allowed;
+    .choice {
+      background: #151e27;
+      border: 1px solid #303b47;
+      color: white;
+      text-align: left;
+      padding: 18px;
+      margin-top: 12px;
     }
 
-    .secondary{
-      background:#202630;
-      color:#e8ecf1;
+    .choice:hover {
+      border-color: #2563eb;
     }
 
-    .token-create{
-      background:#202630;
-      color:#f4f6f8;
-      border:1px solid #343d4a;
-      margin-top:11px;
+    .choice strong {
+      display: block;
+      margin-bottom: 5px;
     }
 
-    .token-create:hover{
-      background:#282f3a;
-      border-color:var(--orange);
+    .choice span {
+      color: #8f9baa;
+      font-size: 13px;
     }
 
-    .token-icon{
-      margin-right:6px;
+    .hidden {
+      display: none !important;
     }
 
-    .token-note{
-      color:#737d8b;
-      font-size:11px;
-      line-height:1.5;
-      text-align:center;
-      margin-top:8px;
+    .message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 9px;
+      background: #17202a;
+      color: #aeb8c3;
+      font-size: 13px;
+      word-break: break-word;
     }
 
-    .methods{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
+    .error {
+      background: #3a1717;
+      color: #ff9c9c;
     }
 
-    .method{
-      margin:0;
-      padding:20px 12px;
-      background:var(--card2);
-      border:1px solid #303947;
-      color:#eef1f5;
+    .success {
+      background: #12351f;
+      color: #9bf0b5;
     }
 
-    .method:hover{
-      border-color:var(--orange);
-      background:#1c2028;
+    .terminal {
+      background: #070b0f;
+      border: 1px solid #26313d;
+      border-radius: 10px;
+      padding: 15px;
+      min-height: 150px;
+      max-height: 280px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      color: #a8f0bb;
+      white-space: pre-wrap;
     }
 
-    .method-icon{
-      display:block;
-      font-size:25px;
-      margin-bottom:8px;
+    .result {
+      text-align: center;
     }
 
-    .method-name{
-      display:block;
-      font-size:15px;
-      font-weight:800;
+    .result h2 {
+      color: #70e08c;
     }
 
-    .method-desc{
-      display:block;
-      margin-top:5px;
-      color:var(--muted);
-      font-size:11px;
-    }
-
-    .terminal{
-      background:#090c11;
-      border:1px solid #252d38;
-      border-radius:11px;
-      padding:14px;
-      min-height:150px;
-      max-height:270px;
-      overflow:auto;
-      white-space:pre-wrap;
-      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      font-size:12px;
-      line-height:1.7;
-      color:#b9c3cf;
-    }
-
-    .success{
-      background:#0d1b13;
-      border:1px solid #29583a;
-      border-radius:12px;
-      padding:16px;
-      line-height:1.7;
-      word-break:break-word;
-    }
-
-    .success-title{
-      color:var(--success);
-      font-weight:850;
-      margin-bottom:8px;
-    }
-
-    .success a{
-      color:#ffab68;
-    }
-
-    .error{
-      color:var(--danger);
-      font-size:13px;
-      line-height:1.5;
-      margin-top:12px;
-    }
-
-    .footer{
-      text-align:center;
-      color:#646d79;
-      font-size:11px;
-      margin-top:17px;
-    }
-
-    .security{
-      color:#737d8b;
-      font-size:11px;
-      line-height:1.5;
-      margin-top:12px;
-    }
-
-    @media(max-width:430px){
-      .container{
-        width:calc(100% - 20px);
-        padding-top:22px;
-      }
-
-      .card{
-        padding:18px;
-      }
-
-      .methods{
-        grid-template-columns:1fr;
-      }
+    .url {
+      background: #080d12;
+      border: 1px solid #303b47;
+      padding: 12px;
+      border-radius: 8px;
+      word-break: break-all;
+      font-size: 13px;
+      margin-top: 15px;
     }
   </style>
 </head>
@@ -311,561 +241,566 @@
 <body>
 
 <div class="container">
-
-  <div class="header">
-    <div class="logo">ET</div>
+  <div class="card">
 
     <h1>EdgeTunnel Wizard</h1>
 
     <div class="subtitle">
-      Deploy EdgeTunnel to Cloudflare
+      Deploy the latest EdgeTunnel automatically
     </div>
-  </div>
 
-  <div class="card">
-
-    <div class="progress">
-      <span id="p1" class="active"></span>
-      <span id="p2"></span>
-      <span id="p3"></span>
+    <div class="steps">
+      <div id="step1Indicator" class="step active">1. Token</div>
+      <div id="step2Indicator" class="step">2. Platform</div>
+      <div id="step3Indicator" class="step">3. Installing</div>
+      <div id="step4Indicator" class="step">4. Complete</div>
     </div>
 
 
     <!-- STEP 1 -->
+    <section id="step1">
 
-    <section id="step1" class="step active">
+      <label for="token">Cloudflare API Token</label>
 
-      <div class="step-number">
-        STEP 1
+      <div class="token-wrapper">
+
+        <input
+          id="token"
+          type="password"
+          placeholder="Paste your Cloudflare API Token"
+          autocomplete="off"
+        >
+
+        <button
+          type="button"
+          class="token-eye"
+          id="tokenEye"
+          onclick="toggleTokenVisibility()"
+          aria-label="Show token">
+          👁
+        </button>
+
       </div>
-
-      <div class="title">
-        Cloudflare API Token
-      </div>
-
-      <div class="description">
-        Enter your Cloudflare API Token.
-        The wizard will automatically detect your Cloudflare account.
-      </div>
-
-      <label for="token">
-        API Token
-      </label>
-
-      <input
-        id="token"
-        type="password"
-        autocomplete="off"
-        placeholder="Paste your API Token"
-      >
-
-      <button id="continueButton">
-        Continue
-      </button>
 
       <button
-        id="createTokenButton"
-        class="token-create"
-        type="button"
-      >
-        <span class="token-icon">🔑</span>
+        class="cloudflare"
+        onclick="createCloudflareToken()">
         Create Cloudflare API Token
       </button>
 
-      <div class="token-note">
-        Opens Cloudflare with the required EdgeTunnel permissions pre-selected.
-      </div>
+      <button
+        class="primary"
+        onclick="verifyToken()">
+        Continue
+      </button>
 
-      <div id="tokenError" class="error"></div>
-
-      <div class="security">
-        Your token is sent directly to the wizard backend over HTTPS
-        and is not stored by this frontend.
-      </div>
+      <div id="message1" class="message hidden"></div>
 
     </section>
 
 
     <!-- STEP 2 -->
+    <section id="step2" class="hidden">
 
-    <section id="step2" class="step">
-
-      <div class="step-number">
-        STEP 2
-      </div>
-
-      <div class="title">
-        Choose deployment
-      </div>
-
-      <div class="description">
-        Select where you want to deploy EdgeTunnel.
-      </div>
-
-      <div class="methods">
-
-        <button
-          class="method"
-          data-method="workers"
-        >
-          <span class="method-icon">⚡</span>
-
-          <span class="method-name">
-            Workers
-          </span>
-
-          <span class="method-desc">
-            Deploy directly to Cloudflare Workers
-          </span>
-        </button>
-
-        <button
-          class="method"
-          data-method="pages"
-        >
-          <span class="method-icon">◈</span>
-
-          <span class="method-name">
-            Pages
-          </span>
-
-          <span class="method-desc">
-            Deploy using Cloudflare Pages
-          </span>
-        </button>
-
-      </div>
+      <label>Where do you want to install EdgeTunnel?</label>
 
       <button
-        id="backButton"
-        class="secondary"
-      >
-        Back
+        class="choice"
+        onclick="startDeploy('workers')">
+
+        <strong>Cloudflare Workers</strong>
+
+        <span>
+          Deploy EdgeTunnel directly to Workers
+        </span>
+
       </button>
+
+      <button
+        class="choice"
+        onclick="startDeploy('pages')">
+
+        <strong>Cloudflare Pages</strong>
+
+        <span>
+          Deploy EdgeTunnel as a Pages project
+        </span>
+
+      </button>
+
+      <div id="message2" class="message hidden"></div>
 
     </section>
 
 
     <!-- STEP 3 -->
+    <section id="step3" class="hidden">
 
-    <section id="step3" class="step">
+      <label>Installation</label>
 
-      <div class="step-number">
-        INSTALLING
-      </div>
-
-      <div class="title">
-        Installing EdgeTunnel
-      </div>
-
-      <div class="description">
-        The wizard is downloading the latest EdgeTunnel source
-        and deploying it to Cloudflare.
-      </div>
-
-      <div
-        id="terminal"
-        class="terminal"
-      ></div>
-
-      <div
-        id="deployError"
-        class="error"
-      ></div>
+      <div id="terminal" class="terminal"></div>
 
     </section>
 
 
     <!-- STEP 4 -->
+    <section id="step4" class="hidden">
 
-    <section id="step4" class="step">
+      <div class="result">
 
-      <div class="step-number">
-        COMPLETE
+        <h2>✓ Installation Complete</h2>
+
+        <p>
+          EdgeTunnel has been deployed successfully.
+        </p>
+
+        <div id="resultUrl" class="url"></div>
+
+        <button
+          class="primary"
+          onclick="copyResult()">
+          Copy URL
+        </button>
+
       </div>
-
-      <div class="title">
-        Installation complete
-      </div>
-
-      <div class="description">
-        EdgeTunnel has been deployed successfully.
-      </div>
-
-      <div
-        id="result"
-        class="success"
-      ></div>
-
-      <button
-        id="againButton"
-        class="secondary"
-      >
-        Install another
-      </button>
 
     </section>
 
   </div>
-
-  <div class="footer">
-    EdgeTunnel source: cmliu/edgetunnel · main
-  </div>
-
 </div>
 
 
 <script>
 
-/*
-  IMPORTANT:
-  No slash at the end.
-*/
-
-const API_BASE =
-  "https://divine-poetry-b97a.hoskhal.workers.dev";
-
-let token = "";
-let deploymentMethod = "";
-
-
-/*
-  Cloudflare Token creation page.
-*/
-
-const CLOUDFLARE_TOKEN_URL =
-  "https://dash.cloudflare.com/profile/api-tokens";
-
-
-function showStep(number){
-
-  document
-    .querySelectorAll(".step")
-    .forEach(element => {
-      element.classList.remove("active");
-    });
-
-  document
-    .getElementById("step" + number)
-    .classList.add("active");
-
-  for(let i = 1; i <= 3; i++){
-
-    document
-      .getElementById("p" + i)
-      .classList.toggle(
-        "active",
-        i <= number
-      );
-
-  }
-
-}
-
-
-function writeLog(message){
-
-  const terminal =
-    document.getElementById("terminal");
-
-  terminal.textContent +=
-    message + "\n";
-
-  terminal.scrollTop =
-    terminal.scrollHeight;
-
-}
-
-
-async function post(path, body){
-
-  const response =
-    await fetch(
-      API_BASE + path,
-      {
-        method:"POST",
-
-        headers:{
-          "Content-Type":"application/json"
-        },
-
-        body:JSON.stringify(body)
-      }
-    );
-
-  let data;
-
-  try{
-
-    data =
-      await response.json();
-
-  }
-  catch{
-
-    throw new Error(
-      "Invalid response from wizard server."
-    );
-
-  }
-
-  if(
-    !response.ok ||
-    !data.success
-  ){
-
-    throw new Error(
-      data.error ||
-      "Cloudflare request failed."
-    );
-
-  }
-
-  return data;
-
-}
-
-
-/* CREATE API TOKEN */
-
-document
-  .getElementById("createTokenButton")
-  .addEventListener(
-    "click",
-    ()=>{
-
-      window.open(
-        CLOUDFLARE_TOKEN_URL,
-        "_blank",
-        "noopener,noreferrer"
-      );
-
-    }
-  );
-
-
-/* TOKEN */
-
-document
-  .getElementById("continueButton")
-  .addEventListener(
-    "click",
-    async ()=>{
-
-      const error =
-        document.getElementById(
-          "tokenError"
-        );
-
-      error.textContent = "";
-
-      token =
-        document
-          .getElementById("token")
-          .value
-          .trim();
-
-      if(!token){
-
-        error.textContent =
-          "Please enter your Cloudflare API Token.";
-
-        return;
-
-      }
-
-      const button =
-        document.getElementById(
-          "continueButton"
-        );
-
-      button.disabled = true;
-
-      button.textContent =
-        "Checking...";
-
-      try{
-
-        await post(
-          "/api/verify",
-          { token }
-        );
-
-        showStep(2);
-
-      }
-      catch(errorObject){
-
-        error.textContent =
-          errorObject.message;
-
-      }
-      finally{
-
-        button.disabled = false;
-
-        button.textContent =
-          "Continue";
-
-      }
-
-    }
-  );
-
-
-/* BACK */
-
-document
-  .getElementById("backButton")
-  .addEventListener(
-    "click",
-    ()=>{
-      showStep(1);
-    }
-  );
-
-
-/* METHOD */
-
-document
-  .querySelectorAll("[data-method]")
-  .forEach(button => {
-
-    button.addEventListener(
-      "click",
-      ()=>{
-
-        deploymentMethod =
-          button.dataset.method;
-
-        showStep(3);
-
-        document
-          .getElementById("terminal")
-          .textContent = "";
-
-        deploy();
-
-      }
-    );
-
-  });
-
-
-/* DEPLOY */
-
-async function deploy(){
-
-  const error =
-    document.getElementById(
-      "deployError"
-    );
-
-  error.textContent = "";
-
-  writeLog(
-    "Starting EdgeTunnel deployment..."
-  );
-
-  writeLog(
-    "Method: " +
-    deploymentMethod
-  );
-
-  try{
-
-    const result =
-      await post(
-        "/api/deploy",
+  /*
+   * EdgeTunnel Wizard Backend
+   */
+  const API_BASE =
+    "https://divine-poetry-b97a.hoskhal.workers.dev";
+
+
+  /*
+   * Cloudflare API Token Template
+   *
+   * Workers Scripts: Edit
+   * Workers KV Storage: Edit
+   * Pages: Edit
+   */
+  const CLOUDFLARE_TOKEN_URL =
+    "https://dash.cloudflare.com/profile/api-tokens" +
+    "?permissionGroupKeys=" +
+    encodeURIComponent(
+      JSON.stringify([
         {
-          token,
-          method:deploymentMethod
+          key: "workers_scripts",
+          type: "edit"
+        },
+        {
+          key: "workers_kv_storage",
+          type: "edit"
+        },
+        {
+          key: "page",
+          type: "edit"
+        }
+      ])
+    ) +
+    "&accountId=*" +
+    "&zoneId=all" +
+    "&name=" +
+    encodeURIComponent("EdgeTunnel Wizard");
+
+
+  let currentToken = "";
+  let currentPlatform = "";
+  let resultURL = "";
+
+
+  /*
+   * Show / Hide Token
+   */
+  function toggleTokenVisibility() {
+
+    const input =
+      document.getElementById("token");
+
+    const eye =
+      document.getElementById("tokenEye");
+
+    if (input.type === "password") {
+
+      input.type = "text";
+
+      eye.textContent = "🙈";
+
+      eye.setAttribute(
+        "aria-label",
+        "Hide token"
+      );
+
+    } else {
+
+      input.type = "password";
+
+      eye.textContent = "👁";
+
+      eye.setAttribute(
+        "aria-label",
+        "Show token"
+      );
+
+    }
+  }
+
+
+  /*
+   * Open Cloudflare Token Creator
+   */
+  function createCloudflareToken() {
+
+    window.open(
+      CLOUDFLARE_TOKEN_URL,
+      "_blank"
+    );
+
+  }
+
+
+  /*
+   * API Request
+   */
+  async function post(path, data) {
+
+    const response =
+      await fetch(
+        API_BASE + path,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify(data)
         }
       );
 
-    if(
-      Array.isArray(
-        result.logs
-      )
-    ){
+    let result;
 
-      result.logs.forEach(
-        writeLog
+    try {
+
+      result = await response.json();
+
+    } catch {
+
+      throw new Error(
+        "Invalid response from EdgeTunnel Wizard API."
       );
 
     }
 
-    const url =
-      result.url;
+    if (
+      !response.ok ||
+      result.success === false
+    ) {
 
-    document
-      .getElementById("result")
-      .innerHTML = `
-
-        <div class="success-title">
-          ✓ EdgeTunnel deployed successfully
-        </div>
-
-        <div>
-          Deployment URL:
-        </div>
-
-        <br>
-
-        <a
-          href="${url}"
-          target="_blank"
-          rel="noopener"
-        >
-          ${url}
-        </a>
-
-        <br><br>
-
-        <small>
-          Your EdgeTunnel source was downloaded
-          from the current main branch.
-        </small>
-
-      `;
-
-    showStep(4);
-
-  }
-  catch(errorObject){
-
-    error.textContent =
-      errorObject.message;
-
-  }
-
-}
-
-
-/* AGAIN */
-
-document
-  .getElementById("againButton")
-  .addEventListener(
-    "click",
-    ()=>{
-
-      token = "";
-
-      deploymentMethod = "";
-
-      document
-        .getElementById("token")
-        .value = "";
-
-      document
-        .getElementById("terminal")
-        .textContent = "";
-
-      showStep(1);
+      throw new Error(
+        result.error ||
+        result.message ||
+        "Request failed."
+      );
 
     }
-  );
+
+    return result;
+  }
+
+
+  /*
+   * Message
+   */
+  function showMessage(
+    id,
+    text,
+    error = false
+  ) {
+
+    const element =
+      document.getElementById(id);
+
+    element.textContent = text;
+
+    element.classList.remove(
+      "hidden",
+      "error",
+      "success"
+    );
+
+    element.classList.add(
+      error ? "error" : "success"
+    );
+
+  }
+
+
+  /*
+   * Steps
+   */
+  function showStep(number) {
+
+    for (
+      let i = 1;
+      i <= 4;
+      i++
+    ) {
+
+      const section =
+        document.getElementById(
+          "step" + i
+        );
+
+      const indicator =
+        document.getElementById(
+          "step" +
+          i +
+          "Indicator"
+        );
+
+      section.classList.toggle(
+        "hidden",
+        i !== number
+      );
+
+      indicator.classList.remove(
+        "active",
+        "done"
+      );
+
+      if (i < number) {
+
+        indicator.classList.add(
+          "done"
+        );
+
+      } else if (i === number) {
+
+        indicator.classList.add(
+          "active"
+        );
+
+      }
+
+    }
+
+  }
+
+
+  /*
+   * Verify Token
+   */
+  async function verifyToken() {
+
+    const token =
+      document
+        .getElementById("token")
+        .value
+        .trim();
+
+    if (!token) {
+
+      showMessage(
+        "message1",
+        "Please enter your Cloudflare API Token.",
+        true
+      );
+
+      return;
+    }
+
+    currentToken = token;
+
+    const button =
+      document.querySelector(
+        "#step1 .primary"
+      );
+
+    button.disabled = true;
+    button.textContent = "Checking...";
+
+    try {
+
+      const result =
+        await post(
+          "/api/verify",
+          {
+            token: currentToken
+          }
+        );
+
+      if (result.success) {
+
+        showStep(2);
+
+      } else {
+
+        throw new Error(
+          result.error ||
+          "Token verification failed."
+        );
+
+      }
+
+    } catch (error) {
+
+      showMessage(
+        "message1",
+        error.message,
+        true
+      );
+
+    } finally {
+
+      button.disabled = false;
+      button.textContent = "Continue";
+
+    }
+
+  }
+
+
+  /*
+   * Start Deployment
+   */
+  async function startDeploy(platform) {
+
+    currentPlatform = platform;
+
+    showStep(3);
+
+    const terminal =
+      document.getElementById(
+        "terminal"
+      );
+
+    terminal.textContent =
+      "$ Starting EdgeTunnel installation...\n";
+
+    try {
+
+      addLog(
+        "Connecting to Cloudflare..."
+      );
+
+      addLog(
+        "Downloading latest EdgeTunnel..."
+      );
+
+      addLog(
+        "Creating Cloudflare resources..."
+      );
+
+      const result =
+        await post(
+          "/api/deploy",
+          {
+            token: currentToken,
+            platform: currentPlatform
+          }
+        );
+
+      addLog(
+        "Deploying EdgeTunnel..."
+      );
+
+      if (result.url) {
+
+        resultURL = result.url;
+
+      } else if (result.domain) {
+
+        resultURL = result.domain;
+
+      } else {
+
+        resultURL =
+          "Deployment completed successfully.";
+
+      }
+
+      addLog(
+        "Installation completed successfully."
+      );
+
+      setTimeout(
+        () => {
+
+          document.getElementById(
+            "resultUrl"
+          ).textContent = resultURL;
+
+          showStep(4);
+
+        },
+        700
+      );
+
+    } catch (error) {
+
+      addLog(
+        "ERROR: " +
+        error.message
+      );
+
+    }
+
+  }
+
+
+  /*
+   * Terminal
+   */
+  function addLog(text) {
+
+    const terminal =
+      document.getElementById(
+        "terminal"
+      );
+
+    terminal.textContent +=
+      "\n> " + text;
+
+    terminal.scrollTop =
+      terminal.scrollHeight;
+
+  }
+
+
+  /*
+   * Copy Result
+   */
+  async function copyResult() {
+
+    if (!resultURL) {
+      return;
+    }
+
+    try {
+
+      await navigator.clipboard.writeText(
+        resultURL
+      );
+
+      alert("Copied!");
+
+    } catch {
+
+      alert(
+        "Copy failed. Please copy it manually."
+      );
+
+    }
+
+  }
 
 </script>
 
