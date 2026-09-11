@@ -564,8 +564,6 @@
 
     <div class="content">
 
-      <!-- STEP 1 -->
-
       <section id="step1" class="step">
 
         <div class="step-title">
@@ -633,8 +631,6 @@
       </section>
 
 
-      <!-- STEP 2 -->
-
       <section id="step2" class="step hidden">
 
         <div class="step-title">
@@ -694,8 +690,6 @@
       </section>
 
 
-      <!-- STEP 3 -->
-
       <section id="step3" class="step hidden">
 
         <div class="step-title">
@@ -717,8 +711,6 @@
 
       </section>
 
-
-      <!-- STEP 4 -->
 
       <section id="step4" class="step hidden">
 
@@ -770,7 +762,7 @@
               <button
                 class="mini-copy"
                 type="button"
-                onclick="copyText('adminPassword')"
+                onclick="copyText('adminPassword', this)"
               >
                 Copy
               </button>
@@ -833,7 +825,7 @@
 <script>
 
   const API_BASE =
-  "https://cloud-api-bridge.hoskhal.workers.dev";
+    "https://cloud-api-bridge.hoskhal.workers.dev";
 
   const CLOUDFLARE_TOKEN_URL =
     "https://dash.cloudflare.com/profile/api-tokens" +
@@ -870,6 +862,7 @@
 
 
   function createToken() {
+
     window.open(
       CLOUDFLARE_TOKEN_URL,
       "_blank",
@@ -917,14 +910,12 @@
 
     element.textContent = message;
     element.classList.remove("hidden");
-
   }
 
 
   function clearError(id) {
 
     $(id).classList.add("hidden");
-
   }
 
 
@@ -946,8 +937,11 @@
     let data = null;
 
     try {
+
       data = await response.json();
+
     } catch {
+
       throw new Error(
         "The deployment API returned an invalid response."
       );
@@ -1002,6 +996,7 @@
         );
 
       if (!data.success) {
+
         throw new Error(
           data.error ||
           "Token verification failed."
@@ -1021,7 +1016,6 @@
 
       button.disabled = false;
       button.textContent = "Continue";
-
     }
   }
 
@@ -1101,7 +1095,6 @@
       addLog(
         "Please check the Cloudflare API Token permissions and try again."
       );
-
     }
   }
 
@@ -1161,7 +1154,7 @@
   }
 
 
-  async function copyText(id) {
+  async function copyText(id, button) {
 
     const text =
       $(id).textContent.trim();
@@ -1172,9 +1165,6 @@
 
       await navigator.clipboard.writeText(text);
 
-      const button =
-        event?.currentTarget;
-
       if (button) {
 
         const old =
@@ -1184,7 +1174,10 @@
           "Copied";
 
         setTimeout(() => {
-          button.textContent = old;
+
+          button.textContent =
+            old;
+
         }, 1200);
       }
 
@@ -1216,7 +1209,6 @@ Project: ${result.projectName || ""}`;
     } catch {
 
       alert("Copy failed. Please copy manually.");
-
     }
   }
 
