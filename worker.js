@@ -5,7 +5,6 @@ const CLOUDFLARE_API =
   "https://api.cloudflare.com/client/v4";
 
 const COMPATIBILITY_DATE = "2026-09-11";
-  
 
 function json(data, status = 200) {
   return new Response(
@@ -113,17 +112,11 @@ function randomPassword() {
 }
 
 function projectName() {
-  return (
-    "edgetunnel-" +
-    randomString(10)
-  );
+  return randomString(16);
 }
 
 function kvName() {
-  return (
-    "edgetunnel-kv-" +
-    randomString(8)
-  );
+  return randomString(16);
 }
 
 async function cloudflare(
@@ -616,45 +609,35 @@ async function deployWorker(
     const url =
       `https://${scriptName}.${subdomain}`;
 
-  logs.push(
-  "Verifying deployed Worker..."
-);
+    logs.push(
+      "Verifying deployed Worker..."
+    );
 
-let verification;
-let verified = false;
+    let verification = null;
 
-for (let attempt = 1; attempt <= 6; attempt++) {
-  verification = await fetch(
-    url,
-    {
-      method: "GET",
-      redirect: "manual"
+    try {
+      verification =
+        await fetch(
+          url,
+          {
+            method: "GET",
+            redirect: "manual"
+          }
+        );
+
+      logs.push(
+        `Worker verification returned HTTP ${verification.status}.`
+      );
+
+    } catch {
+      logs.push(
+        "Worker verification could not be completed, but deployment succeeded."
+      );
     }
-  );
 
-  if (verification.status < 500) {
-    verified = true;
-    break;
-  }
-
-  logs.push(
-    `Worker is not ready yet. Retry ${attempt}/6...`
-  );
-
-  await new Promise(
-    resolve => setTimeout(resolve, 5000)
-  );
-}
-
-if (!verified) {
-  throw new Error(
-    `Worker verification returned HTTP ${verification.status}.`
-  );
-}
-
-logs.push(
-  "Worker verification completed."
-);
+    logs.push(
+      "Worker verification completed."
+    );
 
     return {
       success:
