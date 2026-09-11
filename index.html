@@ -26,15 +26,8 @@
       min-height:100%;
       background:var(--bg);
       color:var(--text);
-      font-family:
-        Inter,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
+      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,
+      "Segoe UI",Roboto,Arial,sans-serif;
     }
 
     body{
@@ -252,12 +245,7 @@
       max-height:270px;
       overflow:auto;
       white-space:pre-wrap;
-      font-family:
-        ui-monospace,
-        SFMono-Regular,
-        Menlo,
-        Consolas,
-        monospace;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
       font-size:12px;
       line-height:1.7;
       color:#b9c3cf;
@@ -375,9 +363,6 @@
         Continue
       </button>
 
-
-      <!-- CREATE TOKEN -->
-
       <button
         id="createTokenButton"
         class="token-create"
@@ -390,7 +375,6 @@
       <div class="token-note">
         Opens Cloudflare with the required EdgeTunnel permissions pre-selected.
       </div>
-
 
       <div id="tokenError" class="error"></div>
 
@@ -434,7 +418,6 @@
             Deploy directly to Cloudflare Workers
           </span>
         </button>
-
 
         <button
           class="method"
@@ -534,49 +517,24 @@
 
 <script>
 
+/*
+  IMPORTANT:
+  No slash at the end.
+*/
+
 const API_BASE =
-  "https://divine-poetry-b97a.hoskhal.workers.dev/";
+  "https://divine-poetry-b97a.hoskhal.workers.dev";
 
 let token = "";
 let deploymentMethod = "";
 
 
 /*
-  Cloudflare API Token Template
-
-  Permissions:
-  - Workers Scripts: Edit
-  - Workers KV Storage: Edit
-  - Cloudflare Pages: Edit
-
-  The user still confirms the token creation inside Cloudflare.
+  Cloudflare Token creation page.
 */
 
 const CLOUDFLARE_TOKEN_URL =
-  "https://dash.cloudflare.com/profile/api-tokens" +
-  "?permissionGroupKeys=" +
-  encodeURIComponent(
-    JSON.stringify([
-      {
-        key:"workers_scripts",
-        type:"edit"
-      },
-      {
-        key:"workers_kv_storage",
-        type:"edit"
-      },
-      {
-        key:"page",
-        type:"edit"
-      }
-    ])
-  ) +
-  "&accountId=*" +
-  "&zoneId=all" +
-  "&name=" +
-  encodeURIComponent(
-    "EdgeTunnel Wizard"
-  );
+  "https://dash.cloudflare.com/profile/api-tokens";
 
 
 function showStep(number){
