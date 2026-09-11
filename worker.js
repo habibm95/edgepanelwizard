@@ -4,7 +4,7 @@ const EDGE_TUNNEL_SOURCE =
 const CLOUDFLARE_API =
   "https://api.cloudflare.com/client/v4";
 
-const COMPATIBILITY_DATE = "2026-09-12";
+const COMPATIBILITY_DATE = "2026-09-11";
   
 
 function json(data, status = 200) {
@@ -616,33 +616,45 @@ async function deployWorker(
     const url =
       `https://${scriptName}.${subdomain}`;
 
-    logs.push(
-      "Verifying deployed Worker..."
-    );
+  logs.push(
+  "Verifying deployed Worker..."
+);
 
-    const verification =
-      await fetch(
-        url,
-        {
-          method:
-            "GET",
+let verification;
+let verified = false;
 
-          redirect:
-            "manual"
-        }
-      );
-
-    if (
-      verification.status >= 500
-    ) {
-      throw new Error(
-        `Worker verification returned HTTP ${verification.status}.`
-      );
+for (let attempt = 1; attempt <= 6; attempt++) {
+  verification = await fetch(
+    url,
+    {
+      method: "GET",
+      redirect: "manual"
     }
+  );
 
-    logs.push(
-      "Worker verification completed."
-    );
+  if (verification.status < 500) {
+    verified = true;
+    break;
+  }
+
+  logs.push(
+    `Worker is not ready yet. Retry ${attempt}/6...`
+  );
+
+  await new Promise(
+    resolve => setTimeout(resolve, 5000)
+  );
+}
+
+if (!verified) {
+  throw new Error(
+    `Worker verification returned HTTP ${verification.status}.`
+  );
+}
+
+logs.push(
+  "Worker verification completed."
+);
 
     return {
       success:
