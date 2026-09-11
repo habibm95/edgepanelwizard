@@ -1,13 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#080b12">
   <meta name="description" content="EdgeTunnel Wizard - One click Cloudflare deployment">
-  <title>EdgeTunnel Wizard</title>
-
-  <style>
+  <title>EdgeTunnel Wizard</title>  <style>
     :root {
       --bg: #070a10;
       --card: rgba(15, 19, 29, .88);
@@ -540,296 +537,282 @@
         height: 280px;
       }
     }
-  </style>
-</head>
-
-<body>
-
-<div class="app">
-
-  <div class="brand">
+  </style></head><body><div class="app">  <div class="brand">
     <div class="logo">E</div>
     <h1>EdgeTunnel Wizard</h1>
     <p>Fast. Simple. Automatic.</p>
-  </div>
+  </div>  <div class="card"><div class="progress">
+  <div id="p1" class="progress-item active"></div>
+  <div id="p2" class="progress-item"></div>
+  <div id="p3" class="progress-item"></div>
+  <div id="p4" class="progress-item"></div>
+</div>
 
-  <div class="card">
+<div class="content">
 
-    <div class="progress">
-      <div id="p1" class="progress-item active"></div>
-      <div id="p2" class="progress-item"></div>
-      <div id="p3" class="progress-item"></div>
-      <div id="p4" class="progress-item"></div>
+  <section id="step1" class="step">
+
+    <div class="step-title">
+      Connect Cloudflare
     </div>
 
-    <div class="content">
+    <div class="step-description">
+      Create a Cloudflare API Token and paste it below.
+      The wizard will use it only during installation.
+    </div>
 
-      <section id="step1" class="step">
+    <label class="label" for="token">
+      Cloudflare API Token
+    </label>
 
-        <div class="step-title">
-          Connect Cloudflare
+    <div class="token-box">
+      <input
+        id="token"
+        class="token-input"
+        type="password"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Paste your API Token here"
+      >
+
+      <button
+        id="eye"
+        class="eye"
+        type="button"
+        onclick="toggleToken()"
+        aria-label="Show token"
+      >
+        👁
+      </button>
+    </div>
+
+    <button
+      id="createToken"
+      class="button secondary"
+      type="button"
+      onclick="createToken()"
+    >
+      🔑 Create Cloudflare API Token
+    </button>
+
+    <button
+      id="continueButton"
+      class="button primary"
+      type="button"
+      onclick="verifyToken()"
+    >
+      Continue
+    </button>
+
+    <div class="token-help">
+      <span>●</span>
+      <span>
+        Your token is not stored by this wizard.
+        It is sent only to the deployment API when you continue.
+      </span>
+    </div>
+
+    <div id="error1" class="error-box hidden"></div>
+
+  </section>
+
+
+  <section id="step2" class="step hidden">
+
+    <div class="step-title">
+      Choose deployment
+    </div>
+
+    <div class="step-description">
+      Select where you want EdgeTunnel to be installed.
+      Everything else will be configured automatically.
+    </div>
+
+    <div class="platforms">
+
+      <button
+        class="platform"
+        type="button"
+        onclick="deploy('workers')"
+      >
+        <div class="platform-icon">⚡</div>
+
+        <div class="platform-title">
+          Cloudflare Workers
         </div>
 
-        <div class="step-description">
-          Create a Cloudflare API Token and paste it below.
-          The wizard will use it only during installation.
+        <div class="platform-description">
+          Recommended. Direct Worker deployment with
+          automatic KV binding and workers.dev URL.
+        </div>
+      </button>
+
+      <button
+        class="platform"
+        type="button"
+        onclick="deploy('pages')"
+      >
+        <div class="platform-icon">◆</div>
+
+        <div class="platform-title">
+          Cloudflare Pages
         </div>
 
-        <label class="label" for="token">
-          Cloudflare API Token
-        </label>
-
-        <div class="token-box">
-          <input
-            id="token"
-            class="token-input"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Paste your API Token here"
-          >
-
-          <button
-            id="eye"
-            class="eye"
-            type="button"
-            onclick="toggleToken()"
-            aria-label="Show token"
-          >
-            👁
-          </button>
+        <div class="platform-description">
+          Deploy EdgeTunnel using Cloudflare Pages
+          Advanced Mode.
         </div>
-
-        <button
-          id="createToken"
-          class="button secondary"
-          type="button"
-          onclick="createToken()"
-        >
-          🔑 Create Cloudflare API Token
-        </button>
-
-        <button
-          id="continueButton"
-          class="button primary"
-          type="button"
-          onclick="verifyToken()"
-        >
-          Continue
-        </button>
-
-        <div class="token-help">
-          <span>●</span>
-          <span>
-            Your token is not stored by this wizard.
-            It is sent only to the deployment API when you continue.
-          </span>
-        </div>
-
-        <div id="error1" class="error-box hidden"></div>
-
-      </section>
-
-
-      <section id="step2" class="step hidden">
-
-        <div class="step-title">
-          Choose deployment
-        </div>
-
-        <div class="step-description">
-          Select where you want EdgeTunnel to be installed.
-          Everything else will be configured automatically.
-        </div>
-
-        <div class="platforms">
-
-          <button
-            class="platform"
-            type="button"
-            onclick="deploy('workers')"
-          >
-            <div class="platform-icon">⚡</div>
-
-            <div class="platform-title">
-              Cloudflare Workers
-            </div>
-
-            <div class="platform-description">
-              Recommended. Direct Worker deployment with
-              automatic KV binding and workers.dev URL.
-            </div>
-          </button>
-
-          <button
-            class="platform"
-            type="button"
-            onclick="deploy('pages')"
-          >
-            <div class="platform-icon">◆</div>
-
-            <div class="platform-title">
-              Cloudflare Pages
-            </div>
-
-            <div class="platform-description">
-              Deploy EdgeTunnel using Cloudflare Pages
-              Advanced Mode.
-            </div>
-          </button>
-
-        </div>
-
-        <div class="notice">
-          No Worker name, UUID, KV ID or other technical
-          settings are required. The wizard generates them automatically.
-        </div>
-
-        <div id="error2" class="error-box hidden"></div>
-
-      </section>
-
-
-      <section id="step3" class="step hidden">
-
-        <div class="step-title">
-          Installing EdgeTunnel
-        </div>
-
-        <div class="step-description">
-          Please keep this page open until installation is complete.
-        </div>
-
-        <div class="install-status">
-          <div class="spinner"></div>
-          <span id="installStatus">
-            Installing...
-          </span>
-        </div>
-
-        <div id="terminal" class="terminal"></div>
-
-      </section>
-
-
-      <section id="step4" class="step hidden">
-
-        <div class="success-icon">
-          ✓
-        </div>
-
-        <div class="complete-title">
-          Installation Complete
-        </div>
-
-        <div class="complete-description">
-          EdgeTunnel has been deployed successfully.
-          Your access information is shown below.
-        </div>
-
-        <div class="result-grid">
-
-          <div class="result-item">
-            <div class="result-label">
-              Deployment URL
-            </div>
-
-            <div
-              id="resultUrl"
-              class="result-value"
-            ></div>
-          </div>
-
-          <div class="result-item">
-            <div class="result-label">
-              Admin Panel
-            </div>
-
-            <div
-              id="adminUrl"
-              class="result-value"
-            ></div>
-          </div>
-
-          <div class="result-item">
-            <div class="result-label">
-              Admin Password
-            </div>
-
-            <div class="password-value">
-              <span id="adminPassword"></span>
-
-              <button
-                class="mini-copy"
-                type="button"
-                onclick="copyText('adminPassword', this)"
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-
-          <div class="result-item">
-            <div class="result-label">
-              Project
-            </div>
-
-            <div
-              id="projectName"
-              class="result-value"
-            ></div>
-          </div>
-
-        </div>
-
-        <div class="actions">
-
-          <button
-            class="button primary"
-            type="button"
-            onclick="openAdmin()"
-          >
-            Open Admin
-          </button>
-
-          <button
-            class="button secondary"
-            type="button"
-            onclick="copyAll()"
-          >
-            Copy Details
-          </button>
-
-        </div>
-
-        <button
-          class="button secondary"
-          type="button"
-          onclick="location.reload()"
-        >
-          New Installation
-        </button>
-
-      </section>
+      </button>
 
     </div>
-  </div>
 
-  <div class="footer">
-    EdgeTunnel Wizard • Latest source fetched during installation
-  </div>
+    <div class="notice">
+      No Worker name, UUID, KV ID or other technical
+      settings are required. The wizard generates them automatically.
+    </div>
+
+    <div id="error2" class="error-box hidden"></div>
+
+  </section>
+
+
+  <section id="step3" class="step hidden">
+
+    <div class="step-title">
+      Installing EdgeTunnel
+    </div>
+
+    <div class="step-description">
+      Please keep this page open until installation is complete.
+    </div>
+
+    <div class="install-status">
+      <div class="spinner"></div>
+      <span id="installStatus">
+        Installing...
+      </span>
+    </div>
+
+    <div id="terminal" class="terminal"></div>
+
+  </section>
+
+
+  <section id="step4" class="step hidden">
+
+    <div class="success-icon">
+      ✓
+    </div>
+
+    <div class="complete-title">
+      Installation Complete
+    </div>
+
+    <div class="complete-description">
+      EdgeTunnel has been deployed successfully.
+      Your access information is shown below.
+    </div>
+
+    <div class="result-grid">
+
+      <div class="result-item">
+        <div class="result-label">
+          Deployment URL
+        </div>
+
+        <div
+          id="resultUrl"
+          class="result-value"
+        ></div>
+      </div>
+
+      <div class="result-item">
+        <div class="result-label">
+          Admin Panel
+        </div>
+
+        <div
+          id="adminUrl"
+          class="result-value"
+        ></div>
+      </div>
+
+      <div class="result-item">
+        <div class="result-label">
+          Admin Password
+        </div>
+
+        <div class="password-value">
+          <span id="adminPassword"></span>
+
+          <button
+            class="mini-copy"
+            type="button"
+            onclick="copyText('adminPassword', this)"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <div class="result-item">
+        <div class="result-label">
+          Project
+        </div>
+
+        <div
+          id="projectName"
+          class="result-value"
+        ></div>
+      </div>
+
+    </div>
+
+    <div class="actions">
+
+      <button
+        class="button primary"
+        type="button"
+        onclick="openAdmin()"
+      >
+        Open Admin
+      </button>
+
+      <button
+        class="button secondary"
+        type="button"
+        onclick="copyAll()"
+      >
+        Copy Details
+      </button>
+
+    </div>
+
+    <button
+      class="button secondary"
+      type="button"
+      onclick="location.reload()"
+    >
+      New Installation
+    </button>
+
+  </section>
 
 </div>
 
-
-<script>
+  </div>  <div class="footer">
+    EdgeTunnel Wizard • Latest source fetched during installation
+  </div></div><script>
 
   const API_BASE =
     "https://cloud-api-bridge.hoskhal.workers.dev";
 
   const CLOUDFLARE_TOKEN_URL =
     "https://dash.cloudflare.com/profile/api-tokens" +
-    "?template=edit-cloudflare-workers";
+    "?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_routes%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22page%22%2C%22type%22%3A%22edit%22%7D%5D" +
+    "&accountId=%2A" +
+    "&zoneId=all" +
+    "&name=EdgeTunnel%20Wizard";
 
   let currentToken = "";
   let result = null;
@@ -1212,7 +1195,5 @@ Project: ${result.projectName || ""}`;
     }
   }
 
-</script>
-
-</body>
+</script></body>
 </html>
