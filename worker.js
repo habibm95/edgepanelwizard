@@ -469,10 +469,29 @@ async function ensureAccountWorkersSubdomain(
         }
       );
 
-    return (
+    let subdomain =
       created?.result?.subdomain ||
-      null
-    );
+      null;
+
+    if (!subdomain) {
+      return null;
+    }
+
+    subdomain =
+      String(subdomain)
+        .trim()
+        .replace(/^https?:\/\//, "")
+        .replace(/\/+$/, "");
+
+    if (
+      !subdomain.endsWith(".workers.dev")
+    ) {
+      subdomain =
+        `${subdomain}.workers.dev`;
+    }
+
+    return subdomain;
+
   } catch {
     logs.push(
       "Account workers.dev subdomain could not be created automatically."
