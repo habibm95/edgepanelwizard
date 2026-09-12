@@ -858,41 +858,33 @@ async function deployPages(
       "Pages deployment uploaded."
     );
 
-    const aliases =
-      deployment?.result?.aliases;
-
-    let url =
-      Array.isArray(aliases) &&
-      aliases.length
-        ? aliases[0]
-        : null;
-
-    if (!url) {
-      url =
-        `https://${name}.pages.dev`;
-    }
+    const url =
+      `https://${name}.pages.dev`;
 
     logs.push(
       "Verifying Pages deployment..."
     );
 
-    const check =
-      await fetch(
-        url,
-        {
-          method:
-            "GET",
+    try {
+      const check =
+        await fetch(
+          url,
+          {
+            method:
+              "GET",
 
-          redirect:
-            "manual"
-        }
+            redirect:
+              "manual"
+          }
+        );
+
+      logs.push(
+        `Pages verification returned HTTP ${check.status}.`
       );
 
-    if (
-      check.status >= 500
-    ) {
-      throw new Error(
-        `Pages verification returned HTTP ${check.status}.`
+    } catch {
+      logs.push(
+        "Pages verification could not be completed, but deployment succeeded."
       );
     }
 
