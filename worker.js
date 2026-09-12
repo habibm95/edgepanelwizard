@@ -405,10 +405,28 @@ async function getWorkersSubdomain(
       `/accounts/${accountId}/workers/subdomain`
     );
 
-  return (
+  let subdomain =
     result?.result?.subdomain ||
-    null
-  );
+    null;
+
+  if (!subdomain) {
+    return null;
+  }
+
+  subdomain =
+    String(subdomain)
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/\/+$/, "");
+
+  if (
+    !subdomain.endsWith(".workers.dev")
+  ) {
+    subdomain =
+      `${subdomain}.workers.dev`;
+  }
+
+  return subdomain;
 }
 
 async function ensureAccountWorkersSubdomain(
